@@ -6,6 +6,9 @@ public class PlayerController : MonoBehaviour
     public float Speed;
     public float DashSpeed;
     public float Threshold;
+    public float DashDuration;
+    public float DoneDashDuration;
+    public float DoneDashSpeed;
 
     public Sprite[] FacingSprites;
 
@@ -13,6 +16,9 @@ public class PlayerController : MonoBehaviour
 
     Rigidbody2D rb;
     Transform grabbable;
+    MovementState state = MovementState.Moving;
+    Vector2 dashDirection;
+    float stateTimeRemaining;
 
     // Gizmos variables
     Vector2 gizmos_position;
@@ -51,12 +57,11 @@ public class PlayerController : MonoBehaviour
     {
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
-
+        float xa = Mathf.Abs(x);
+        float ya = Mathf.Abs(y);
+        
         // Determine facing
         {
-            float xa = Mathf.Abs(x);
-            float ya = Mathf.Abs(y);
-
             if (xa >= ya)
             {
                 if (x > Threshold)
@@ -86,13 +91,40 @@ public class PlayerController : MonoBehaviour
             Vector2 movement = new Vector2(x, y);
             
             // Dash
-            if (Input.GetKeyDown(KeyCode.LeftShift))
+            if (state == MovementState.Moving &&
+                Input.GetKeyDown(KeyCode.LeftShift) && 
+                (xa > Threshold || ya > Threshold))
             {
+                state = MovementState.Dashing;
                 movement *= DashSpeed;
+                dashDirection = new Vector2(x, y);
+                stateTimeRemaining = DashDuration;
             }
-            else
+            
+            if (state == MovementState.Moving)
             {
                 movement *= Speed;
+            }
+            else if (state == MovementState.DoneDash)
+            {
+                movement *= DoneDashSpeed;
+                stateTimeRemaining -= Time.deltaTime;
+                if (stateTimeRemaining <= 0)
+                {
+                    state = MovementState.Moving;
+                }
+            }
+            else if (state == MovementState.Dashing)
+            {
+                movement = dashDirection * DashSpeed;
+
+                // Dash is over
+                stateTimeRemaining -= Time.deltaTime;
+                if (stateTimeRemaining <= 0)
+                {
+                    state = MovementState.DoneDash;
+                    stateTimeRemaining = DoneDashDuration;
+                }
             }
             rb.velocity = movement;
         }
@@ -175,5 +207,12 @@ public class PlayerController : MonoBehaviour
     void OnDrawGizmos()
     {
         Gizmos.DrawCube(gizmos_position, gizmos_size);
+    }
+
+    public enum MovementState
+    {
+        Moving,
+        Dashing,
+        DoneDash
     }
 }

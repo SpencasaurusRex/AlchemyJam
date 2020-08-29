@@ -136,7 +136,7 @@ GameObject:
   - component: {fileID: 68072883}
   - component: {fileID: 68072882}
   m_Layer: 8
-  m_Name: Square
+  m_Name: Item
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -302,8 +302,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Speed: 5
-  DashSpeed: 10
+  DashSpeed: 15
   Threshold: 0.1
+  DashDuration: 0.3
+  DoneDashDuration: 0.3
+  DoneDashSpeed: 2
   FacingSprites:
   - {fileID: -2311659948842064771, guid: d7610a2a5f5c21c44a9bd999b934d094, type: 3}
   - {fileID: 7364682651488144517, guid: d7610a2a5f5c21c44a9bd999b934d094, type: 3}
