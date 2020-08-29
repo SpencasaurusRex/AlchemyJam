@@ -10,7 +10,20 @@ public class Station : MonoBehaviour
     public Ingredient IngredientPrefab;
 
     bool looked = false;
-    int progress = 0;
+
+    int _progress = 0;
+    int Progress
+    {
+        get => _progress;
+        set
+        {
+            if (_progress == value) return;
+            _progress = value;
+            stationCanvas.ProgressChange((float)value / TotalProgressNeeded);
+        }
+    }
+    
+    
     StationCanvas stationCanvas;
 
     public enum InputType
@@ -27,6 +40,7 @@ public class Station : MonoBehaviour
         canvas = GetComponentInChildren<Canvas>();
         canvas.enabled = false;
         stationCanvas = GetComponentInChildren<StationCanvas>();
+        stationCanvas.ProgressChange(0);
     }
 
     public void PlayerLooking()
@@ -60,7 +74,7 @@ public class Station : MonoBehaviour
 
     public bool GrabIngredient(out Ingredient ingredient)
     {
-        progress = 0;
+        Progress = 0;
         if (ingredients.Any())
         {
             ingredient = ingredients.Last();
@@ -85,8 +99,8 @@ public class Station : MonoBehaviour
 
         if (looked && ingredients.Any() && Input.GetKeyDown(KeyCode.E))
         {
-            progress++;
-            if (progress >= TotalProgressNeeded)
+            Progress++;
+            if (Progress >= TotalProgressNeeded)
             {
                 Complete();
             }
@@ -106,7 +120,7 @@ public class Station : MonoBehaviour
         newIngredient.Setup();
         newIngredient.SpriteRenderer.color = Color.black;
 
-        progress = 0;
+        Progress = 0;
 
         AddIngredient(newIngredient);
     }

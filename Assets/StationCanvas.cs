@@ -8,21 +8,26 @@ public class StationCanvas : MonoBehaviour
     public Sprite UnPressed => Sprites[0];
     public Sprite Pressed => Sprites[1];
 
-    Image image;
+    public Image KeyImage;
+    public Image ProgressImage;
 
     void Start()
     {
-        image = GetComponentInChildren<Image>();
-        image.sprite = UnPressed;
+        KeyImage.sprite = UnPressed;
+    }
+
+    public void ProgressChange(float percent)
+    {
+        ProgressImage.GetComponent<RectTransform>().sizeDelta = new Vector2(percent, 1);
     }
 
     public void KeyPressed()
     {
-        image.sprite = Pressed;
+        KeyImage.sprite = Pressed;
     }
 
     public void KeyUnpressed()
     {
-        image.sprite = UnPressed;
+        KeyImage.sprite = UnPressed;
     }
 }
