@@ -4,12 +4,17 @@ using UnityEngine.UI;
 
 public class StationCanvas : MonoBehaviour
 {
-    public Sprite[] Sprites;
-    public Sprite UnPressed => Sprites[0];
-    public Sprite Pressed => Sprites[1];
+    public Sprite[] KeySprites;
+    public Sprite UnPressed => KeySprites[0];
+    public Sprite Pressed => KeySprites[1];
+
+    public Sprite[] ValidRecipeSprites;
+    public Sprite Check => ValidRecipeSprites[0];
+    public Sprite Ex => ValidRecipeSprites[1];
 
     public Image KeyImage;
     public Image ProgressImage;
+    public Image ValidRecipeImage;
 
     void Start()
     {
@@ -29,5 +34,15 @@ public class StationCanvas : MonoBehaviour
     public void KeyUnpressed()
     {
         KeyImage.sprite = UnPressed;
+    }
+
+    public void ValidRecipe()
+    {
+        ValidRecipeImage.sprite = Check;
+    }
+
+    public void InvalidRecipe()
+    {
+        ValidRecipeImage.sprite = Ex;
     }
 }

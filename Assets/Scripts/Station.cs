@@ -8,32 +8,80 @@ public class Station : MonoBehaviour
     public int TotalProgressNeeded = 5;
 
     public Ingredient IngredientPrefab;
+    public StationType StationType;
 
-    bool looked = false;
+    bool looked;
 
-    int _progress = 0;
-    int Progress
+    Recipe _currentRecipe;
+
+    Recipe CurrentRecipe
+    {
+        get => _currentRecipe;
+        set
+        {
+            if (_currentRecipe == value) return;
+            _currentRecipe = value;
+            if (value == null)
+            {
+                stationCanvas.InvalidRecipe();
+            }
+            else
+            {
+                stationCanvas.ValidRecipe();
+            }
+        }
+    }
+
+    float _progress = 0;
+    float Progress
     {
         get => _progress;
         set
         {
             if (_progress == value) return;
             _progress = value;
-            stationCanvas.ProgressChange((float)value / TotalProgressNeeded);
+            stationCanvas.ProgressChange(value / TotalProgressNeeded);
         }
     }
-    
-    
-    StationCanvas stationCanvas;
 
-    public enum InputType
-    {
-        Mash,
-        Hold
-    }
+    public static List<Recipe> recipes;
+
+    StationCanvas stationCanvas;
 
     List<Ingredient> ingredients = new List<Ingredient>();
     Canvas canvas;
+
+    static Station()
+    {
+        recipes = new List<Recipe>
+        {
+            new Recipe(
+                StationType.Station1,
+                IngredientType.Purple,
+                0f,
+                IngredientType.Red, IngredientType.Blue),
+            new Recipe(
+                StationType.Station1,
+                IngredientType.Yellow,
+                0f,
+                IngredientType.Red, IngredientType.Green),
+            new Recipe(
+                StationType.Station2,
+                IngredientType.Orange,
+                10f,
+                IngredientType.Red, IngredientType.Yellow),
+            new Recipe(
+                StationType.Station2,
+                IngredientType.Cyan,
+                15f,
+                IngredientType.Blue, IngredientType.Green),
+            new Recipe(
+                StationType.Station3,
+                IngredientType.YellowGreen,
+                0f,
+                IngredientType.Yellow, IngredientType.Green)
+        };
+    }
 
     void Start()
     {
@@ -70,6 +118,14 @@ public class Station : MonoBehaviour
 
         ingredient.transform.localScale = Vector3.one * 0.5f;
         ingredient.SpriteRenderer.sortingOrder = PlacedLayer;
+
+        CheckRecipe();
+    }
+
+    void CheckRecipe()
+    {
+        var ingredientTypes = ingredients.Select(i => i.Type).ToList();
+        CurrentRecipe = recipes.FirstOrDefault(x => x.Matches(StationType, ingredientTypes));
     }
 
     public bool GrabIngredient(out Ingredient ingredient)
@@ -79,6 +135,7 @@ public class Station : MonoBehaviour
         {
             ingredient = ingredients.Last();
             ingredients.RemoveAt(ingredients.Count - 1);
+            CheckRecipe();
             return true;
         }
 
@@ -88,27 +145,33 @@ public class Station : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKey(KeyCode.E))
+        // Mash
+        if (StationType == StationType.Station1 && CurrentRecipe != null)
         {
-            stationCanvas.KeyPressed();
-        }
-        else
-        {
-            stationCanvas.KeyUnpressed();
-        }
-
-        if (looked && ingredients.Any() && Input.GetKeyDown(KeyCode.E))
-        {
-            Progress++;
-            if (Progress >= TotalProgressNeeded)
+            if (Input.GetKey(KeyCode.E))
             {
-                Complete();
+                stationCanvas.KeyPressed();
+            }
+            else
+            {
+                stationCanvas.KeyUnpressed();
+            }
+            if (looked && ingredients.Any() && Input.GetKeyDown(KeyCode.E))
+            {
+                Progress++;
+                if (Progress >= TotalProgressNeeded)
+                {
+                    Complete();
+                }
             }
         }
+
     }
 
     void Complete()
     {
+        Recipe recipe = recipes.First(x => x.Matches(StationType, ingredients.Select(i => i.Type).ToList()));
+        var output = recipe.Output;
         foreach (var ingredient in ingredients)
         {
             Destroy(ingredient.gameObject);
@@ -117,11 +180,50 @@ public class Station : MonoBehaviour
         ingredients.Clear();
 
         var newIngredient = Instantiate(IngredientPrefab, transform.position, Quaternion.identity);
+        newIngredient.Type = output;
         newIngredient.Setup();
         newIngredient.SpriteRenderer.color = Color.black;
 
         Progress = 0;
 
         AddIngredient(newIngredient);
+    }
+}
+
+public enum StationType
+{
+    Station1,
+    Station2,
+    Station3
+}
+
+
+public class Recipe
+{
+    public StationType Station;
+    public List<IngredientType> Inputs;
+    public IngredientType Output;
+    public float TimeToProcess;
+
+    public Recipe(StationType station, IngredientType output, float timeToProcess,
+        params IngredientType[] inputs)
+    {
+        Station = station;
+        Output = output;
+        TimeToProcess = timeToProcess;
+        Inputs = inputs.OrderBy(x => x).ToList();
+    }
+
+    public bool Matches(StationType station, List<IngredientType> inputs)
+    {
+        if (Station != station) return false;
+        if (Inputs.Count != inputs.Count) return false;
+
+        for (int i = 0; i < Inputs.Count; i++)
+        {
+            if (Inputs[i] != inputs[i]) return false;
+        }
+
+        return true;
     }
 }
