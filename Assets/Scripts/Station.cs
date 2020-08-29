@@ -5,7 +5,6 @@ using UnityEngine;
 public class Station : MonoBehaviour
 {
     public int PlacedLayer = 2;
-    public int TotalProgressNeeded = 5;
 
     public Ingredient IngredientPrefab;
     public StationType StationType;
@@ -21,14 +20,6 @@ public class Station : MonoBehaviour
         {
             if (_currentRecipe == value) return;
             _currentRecipe = value;
-            if (value == null)
-            {
-                stationCanvas.InvalidRecipe();
-            }
-            else
-            {
-                stationCanvas.ValidRecipe();
-            }
         }
     }
 
@@ -40,7 +31,12 @@ public class Station : MonoBehaviour
         {
             if (_progress == value) return;
             _progress = value;
-            stationCanvas.ProgressChange(value / TotalProgressNeeded);
+            if (CurrentRecipe == null)
+            {
+                _progress = 0;
+                stationCanvas.ProgressChange(0);
+            }
+            else stationCanvas.ProgressChange(value / CurrentRecipe.TotalProgressNeeded);
         }
     }
 
@@ -58,12 +54,12 @@ public class Station : MonoBehaviour
             new Recipe(
                 StationType.Station1,
                 IngredientType.Purple,
-                0f,
+                5f,
                 IngredientType.Red, IngredientType.Blue),
             new Recipe(
                 StationType.Station1,
                 IngredientType.Yellow,
-                0f,
+                5f,
                 IngredientType.Red, IngredientType.Green),
             new Recipe(
                 StationType.Station2,
@@ -146,7 +142,7 @@ public class Station : MonoBehaviour
     void Update()
     {
         // Mash
-        if (StationType == StationType.Station1 && CurrentRecipe != null)
+        if (StationType == StationType.Station1)
         {
             if (Input.GetKey(KeyCode.E))
             {
@@ -156,13 +152,21 @@ public class Station : MonoBehaviour
             {
                 stationCanvas.KeyUnpressed();
             }
-            if (looked && ingredients.Any() && Input.GetKeyDown(KeyCode.E))
+            if (looked && ingredients.Any() && Input.GetKeyDown(KeyCode.E) && CurrentRecipe != null)
             {
                 Progress++;
-                if (Progress >= TotalProgressNeeded)
+                if (Progress >= CurrentRecipe.TotalProgressNeeded)
                 {
                     Complete();
                 }
+            }
+        }
+        else if (StationType == StationType.Station2 && CurrentRecipe != null)
+        {
+            Progress += Time.deltaTime;
+            if (Progress >= CurrentRecipe.TotalProgressNeeded)
+            {
+                Complete();
             }
         }
 
@@ -170,8 +174,7 @@ public class Station : MonoBehaviour
 
     void Complete()
     {
-        Recipe recipe = recipes.First(x => x.Matches(StationType, ingredients.Select(i => i.Type).ToList()));
-        var output = recipe.Output;
+        var output = CurrentRecipe.Output;
         foreach (var ingredient in ingredients)
         {
             Destroy(ingredient.gameObject);
@@ -203,14 +206,14 @@ public class Recipe
     public StationType Station;
     public List<IngredientType> Inputs;
     public IngredientType Output;
-    public float TimeToProcess;
+    public float TotalProgressNeeded;
 
-    public Recipe(StationType station, IngredientType output, float timeToProcess,
+    public Recipe(StationType station, IngredientType output, float totalProgressNeeded,
         params IngredientType[] inputs)
     {
         Station = station;
         Output = output;
-        TimeToProcess = timeToProcess;
+        TotalProgressNeeded = totalProgressNeeded;
         Inputs = inputs.OrderBy(x => x).ToList();
     }
 
@@ -218,6 +221,8 @@ public class Recipe
     {
         if (Station != station) return false;
         if (Inputs.Count != inputs.Count) return false;
+
+        inputs = inputs.OrderBy(t => t).ToList();
 
         for (int i = 0; i < Inputs.Count; i++)
         {

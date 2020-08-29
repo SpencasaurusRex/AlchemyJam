@@ -8,10 +8,6 @@ public class StationCanvas : MonoBehaviour
     public Sprite UnPressed => KeySprites[0];
     public Sprite Pressed => KeySprites[1];
 
-    public Sprite[] ValidRecipeSprites;
-    public Sprite Check => ValidRecipeSprites[0];
-    public Sprite Ex => ValidRecipeSprites[1];
-
     public Image KeyImage;
     public Image ProgressImage;
     public Image ValidRecipeImage;
@@ -34,15 +30,5 @@ public class StationCanvas : MonoBehaviour
     public void KeyUnpressed()
     {
         KeyImage.sprite = UnPressed;
-    }
-
-    public void ValidRecipe()
-    {
-        ValidRecipeImage.sprite = Check;
-    }
-
-    public void InvalidRecipe()
-    {
-        ValidRecipeImage.sprite = Ex;
     }
 }

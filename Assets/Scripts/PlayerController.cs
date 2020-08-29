@@ -224,6 +224,27 @@ public class PlayerController : MonoBehaviour
                 pickedUp = true;
             }
         }
+        else
+        {
+            // Try to pick from a pedestal
+            Vector2 position = transform.position + FacingVector * 0.5f;
+            Vector2 size = Vector2.one * 0.8f;
+            int mask = LayerMask.GetMask("Pedestal");
+            if (GetClosestOverlapBox(position, size, mask, transform.position, out var pedestalCollider))
+            {
+                var pedestal = pedestalCollider.GetComponent<SpawnPedestal>();
+                var ingredient = pedestal.RemoveIngredient();
+                if (ingredient != null)
+                {
+                    ingredient.SpriteRenderer.sortingOrder = GrabbedLayer;
+                    ingredient.Collider2D.enabled = false;
+                    grabbable = ingredient.transform;
+                    grabbable.localScale = Vector3.one * 0.5f;
+                    pickedUp = true;
+                }
+            }
+        }
+
         if (!pickedUp)
         {
             // Grab from ground
@@ -247,6 +268,7 @@ public class PlayerController : MonoBehaviour
 
     void Place()
     {
+        bool placed = false;
         if (LookingStation)
         {
             // Place in station
@@ -255,8 +277,28 @@ public class PlayerController : MonoBehaviour
             var ingredient = grabbable.GetComponent<Ingredient>();
             LookingStation.AddIngredient(ingredient);
             grabbable = null;
+            placed = true;
         }
         else
+        {
+            // Try to place in placement pedestal
+            Vector2 offset = FacingVector * 0.5f;
+            Vector2 boxSize = new Vector2(0.8f, 0.8f); 
+            int mask = LayerMask.GetMask("PlacementPedestal");
+
+            if (GetClosestOverlapBox(rb.position + offset, boxSize, mask, transform.position, out var pedestalCollider))
+            {
+                var placement = pedestalCollider.GetComponent<PlacementPedestal>();
+                var ingredient = grabbable.GetComponent<Ingredient>();
+                if (placement.TryPlace(ingredient))
+                {
+                    grabbable = null;
+                    placed = true;
+                }
+            }
+        }
+        
+        if (!placed)
         {
             // Place on ground
             grabbable.localScale = Vector3.one;
