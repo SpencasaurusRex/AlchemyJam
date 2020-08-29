@@ -10,6 +10,9 @@ public class PlayerController : MonoBehaviour
     public float DoneDashDuration;
     public float DoneDashSpeed;
 
+    public int GrabbedLayer;
+    public int PlacedLayer;
+
     public Sprite[] FacingSprites;
 
     public SpriteRenderer Visuals;
@@ -20,12 +23,28 @@ public class PlayerController : MonoBehaviour
     Vector2 dashDirection;
     float stateTimeRemaining;
 
+    Station _lookingStation;
+
+    Station LookingStation
+    {
+        get => _lookingStation;
+        set
+        {
+            if (_lookingStation == value) return;
+            if (_lookingStation)
+                _lookingStation.PlayerStoppedLooking();
+            _lookingStation = value;
+            if (value != null)
+                _lookingStation.PlayerLooking();
+        }
+    }
+
     // Gizmos variables
     Vector2 gizmos_position;
     Vector2 gizmos_size;
 
     int _facing;
-    int facing
+    int Facing
     {
         get => _facing;
         set
@@ -40,10 +59,10 @@ public class PlayerController : MonoBehaviour
     {
         get
         {
-            if (facing == 0) return new Vector2(1, 0);
-            if (facing == 1) return new Vector2(0, 1);
-            if (facing == 2) return new Vector2(-1, 0);
-            if (facing == 3) return new Vector2(0, -1);
+            if (Facing == 0) return new Vector2(1, 0);
+            if (Facing == 1) return new Vector2(0, 1);
+            if (Facing == 2) return new Vector2(-1, 0);
+            if (Facing == 3) return new Vector2(0, -1);
             return Vector2.zero;
         }
     }
@@ -66,22 +85,22 @@ public class PlayerController : MonoBehaviour
             {
                 if (x > Threshold)
                 {
-                    facing = 0;
+                    Facing = 0;
                 }
                 else if (x < -Threshold)
                 {
-                    facing = 2;
+                    Facing = 2;
                 }
             }
             else
             {
                 if (y > Threshold)
                 {
-                    facing = 1;
+                    Facing = 1;
                 }
                 else if (y < -Threshold)
                 {
-                    facing = 3;
+                    Facing = 3;
                 }
             }
         }
@@ -138,43 +157,14 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
-                Vector2 offset = new Vector2();
-                if (facing == 0)
-                {
-                    offset.x = 1;
-                }
-                else if (facing == 1)
-                {
-                    offset.y = 1;
-                }
-                else if (facing == 2)
-                {
-                    offset.x = -1;
-                }
-                else if (facing == 3)
-                {
-                    offset.y = -1;
-                }
-
-                offset *= 0.5f;
-
-                gizmos_position = rb.position + offset;
-                Vector2 boxSize = new Vector2(0.8f, 0.8f); 
-                gizmos_size = boxSize;
-            
-                Collider2D[] grabbables = Physics2D.OverlapBoxAll(rb.position + offset, boxSize, 0, LayerMask.GetMask("Grabbable"));
-                if (grabbables.Any())
-                {
-                    var closestGrabbable = grabbables.OrderBy(g => (g.transform.position - (Vector3)gizmos_position).sqrMagnitude).First();
-                    Grab(closestGrabbable);
-                }   
+                Grab();
             }
         }
 
         // Move grabbable
         if (grabbable) {
             Vector2 offset = Vector2.zero;
-            switch (facing)
+            switch (Facing)
             {
                 case 0: offset = new Vector2(0.3f, -0.25f);
                     break;
@@ -187,21 +177,94 @@ public class PlayerController : MonoBehaviour
             }
             grabbable.position = transform.position + (Vector3)offset;
         }
+
+        // Look at stations
+        {
+            Vector2 position = transform.position + FacingVector * 0.5f;
+            Vector2 size = Vector2.one * 0.8f;
+            var stations = Physics2D.OverlapBoxAll(position, size, 0, LayerMask.GetMask("Station"));
+            if (GetClosestOverlapBox(position, size, LayerMask.GetMask("Station"), transform.position, out var stationCollider))
+            {
+                var station = stationCollider.GetComponent<Station>();
+                LookingStation = station;
+            }
+            else if (LookingStation)
+            {
+                LookingStation = null;
+            }
+        }
     }
 
-    void Grab(Collider2D collider)
+    bool GetClosestOverlapBox(Vector2 position, Vector2 size, int mask, Vector3 comparePosition, out Collider2D result)
     {
-        collider.enabled = false;
-        grabbable = collider.transform;
-        grabbable.localScale = Vector3.one * 0.5f;
+        var objects = Physics2D.OverlapBoxAll(position, size, 0, mask);
+        if (objects.Any())
+        {
+            result = objects.OrderBy(o => (o.transform.position - comparePosition).sqrMagnitude).First();
+            return true;
+        }
+
+        result = null;
+        return false;
+    }
+
+    void Grab()
+    {
+        bool pickedUp = false;
+        if (LookingStation)
+        {
+            // Grab from station
+            if (LookingStation.GrabIngredient(out var ingredient))
+            {
+                ingredient.Collider2D.enabled = false;
+                grabbable = ingredient.transform;
+                grabbable.localScale = Vector3.one * 0.5f;
+                ingredient.SpriteRenderer.sortingOrder = GrabbedLayer;
+                ingredient.SpriteRenderer.enabled = true;
+                pickedUp = true;
+            }
+        }
+        if (!pickedUp)
+        {
+            // Grab from ground
+            Vector2 offset = FacingVector * 0.5f;
+
+            gizmos_position = rb.position + offset;
+            Vector2 boxSize = new Vector2(0.8f, 0.8f); 
+            gizmos_size = boxSize;
+
+            var position = rb.position + offset;
+            int mask = LayerMask.GetMask("Grabbable");
+            if (GetClosestOverlapBox(rb.position + offset, boxSize, mask, transform.position, out var itemCollider))
+            {
+                itemCollider.enabled = false;
+                grabbable = itemCollider.transform;
+                grabbable.localScale = Vector3.one * 0.5f;
+                grabbable.GetComponent<SpriteRenderer>().sortingOrder = GrabbedLayer;
+            }
+        }
     }
 
     void Place()
     {
-        grabbable.localScale = Vector3.one;
-        grabbable.GetComponent<Collider2D>().enabled = true;
-        grabbable.position = transform.position + FacingVector;
-        grabbable = null;
+        if (LookingStation)
+        {
+            // Place in station
+            grabbable.localScale = Vector3.one;
+            // NOTE: This will fail when we can carry more than just ingredients
+            var ingredient = grabbable.GetComponent<Ingredient>();
+            LookingStation.AddIngredient(ingredient);
+            grabbable = null;
+        }
+        else
+        {
+            // Place on ground
+            grabbable.localScale = Vector3.one;
+            grabbable.GetComponent<Collider2D>().enabled = true;
+            grabbable.position = transform.position + FacingVector;
+            grabbable.GetComponent<SpriteRenderer>().sortingOrder = PlacedLayer;
+            grabbable = null;
+        }
     }
 
     void OnDrawGizmos()
