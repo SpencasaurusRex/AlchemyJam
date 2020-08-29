@@ -14,6 +14,11 @@ public class Ingredient : MonoBehaviour
 
     void Start()
     {
+        Setup();
+    }
+
+    public void Setup()
+    {
         SpriteRenderer = GetComponent<SpriteRenderer>();
         Collider2D = GetComponent<Collider2D>();
     }
